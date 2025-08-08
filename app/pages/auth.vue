@@ -11,20 +11,20 @@ useHead({
 
 const email = ref('')
 const password = ref('')
-const role = ref('doctor')
 const supabase = useSupabaseClient()
 const loading = ref(false)
-const success = ref(false)
+const router = useRouter()
 
 async function login() {
   try {
     loading.value = true
-    const { data, error } = await supabase.auth.signIn({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email.value,
       password: password.value,
     })
-    success.value = true
-    console.log(data, error)
+    if (!error) {
+      router.push('/docdash')
+    }
   } catch (error) {
     console.log(error)
   } finally {
@@ -94,19 +94,12 @@ async function login() {
             />
           </div>
         </div>
-        <label for="role" class="text-sm/6 font-medium text-gray-900 mr-4"
-          >Войти как</label
-        >
-        <select v-model="role" id="role" class="border border-gray-300">
-          <option value="doctor">Врач</option>
-          <option value="clinic">Клиника</option>
-          <option value="manager">Менеджер</option>
-        </select>
 
         <div>
           <button
-            @click="login"
+            @click.prevent="login"
             class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            :disabled="loading"
           >
             Войти
           </button>
