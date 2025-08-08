@@ -57,8 +57,8 @@ useHead({
           </div>
         </nav>
 
-        <a
-          href="#"
+        <NuxtLink
+          to="docres"
           class="block rounded-md border border-gray-300 p-4 shadow-sm sm:p-6 bg-white mb-4"
         >
           <div class="sm:flex sm:justify-between sm:gap-4 lg:gap-6">
@@ -87,10 +87,10 @@ useHead({
             class="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-800 inset-ring inset-ring-yellow-600/20"
             >Осталось 6 минут</span
           >
-        </a>
+        </NuxtLink>
 
-        <a
-          href="#"
+        <NuxtLink
+          to="/docres"
           class="block rounded-md border border-gray-300 p-4 shadow-sm sm:p-6 bg-white mb-4"
         >
           <div class="sm:flex sm:justify-between sm:gap-4 lg:gap-6">
@@ -115,10 +115,10 @@ useHead({
             class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10"
             >Осталось 13 часов</span
           >
-        </a>
+        </NuxtLink>
 
-        <a
-          href="#"
+        <NuxtLink
+          to="/docres"
           class="block rounded-md border border-gray-300 p-4 shadow-sm sm:p-6 bg-white mb-4"
         >
           <div class="sm:flex sm:justify-between sm:gap-4 lg:gap-6">
@@ -143,7 +143,7 @@ useHead({
             class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10"
             >Осталось 2 часа</span
           >
-        </a>
+        </NuxtLink>
       </div>
     </main>
   </div>

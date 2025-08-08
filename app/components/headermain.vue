@@ -45,9 +45,9 @@
         <NuxtLink to="todoc" class="text-sm/6 font-semibold text-gray-900"
           >Врачам</NuxtLink
         >
-        <NuxtLink to="blog" class="text-sm/6 font-semibold text-gray-900"
+        <!-- <NuxtLink to="blog" class="text-sm/6 font-semibold text-gray-900"
           >Блог</NuxtLink
-        >
+        > -->
         <div class="hidden lg:flex lg:flex-1 lg:justify-end">
           <button
             command="show-modal"
@@ -123,11 +123,11 @@
                     class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-gray-900 hover:bg-gray-50"
                     >Врачам</NuxtLink
                   >
-                  <NuxtLink
+                  <!-- <NuxtLink
                     to="blog"
                     class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-gray-900 hover:bg-gray-50"
                     >Блог</NuxtLink
-                  >
+                  > -->
                 </div>
                 <div class="py-6">
                   <NuxtLink

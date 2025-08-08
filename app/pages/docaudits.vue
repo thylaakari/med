@@ -7,7 +7,9 @@
         <div class="flex items-start gap-4 p-4 sm:p-6 lg:p-8">
           <div>
             <h3 class="font-medium sm:text-lg">
-              <a href="#" class="hover:underline"> Коленно-локтевой сустав </a>
+              <NuxtLink to="/docaudit" class="hover:underline">
+                Коленно-локтевой сустав
+              </NuxtLink>
             </h3>
 
             <div class="mt-2 sm:flex sm:items-center sm:gap-2">
@@ -52,7 +54,9 @@
         <div class="flex items-start gap-4 p-4 sm:p-6 lg:p-8">
           <div>
             <h3 class="font-medium sm:text-lg">
-              <a href="#" class="hover:underline">Голова</a>
+              <NuxtLink to="/docaudit" class="hover:underline">
+                Голова
+              </NuxtLink>
             </h3>
 
             <div class="mt-2 sm:flex sm:items-center sm:gap-2">
@@ -98,9 +102,7 @@
       <article class="rounded-xl border-2 border-gray-100 bg-white mb-4">
         <div class="flex items-start gap-4 p-4 sm:p-6 lg:p-8">
           <div>
-            <h3 class="font-medium sm:text-lg">
-              <a href="#" class="hover:underline">Голова</a>
-            </h3>
+            <NuxtLink to="/docaudit" class="hover:underline"> Живот </NuxtLink>
 
             <div class="mt-2 sm:flex sm:items-center sm:gap-2">
               <div class="flex items-center gap-1 text-gray-500">
