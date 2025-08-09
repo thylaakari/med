@@ -396,6 +396,8 @@
 <script setup>
 definePageMeta({
   layout: 'doclayout',
+  middleware: ['auth-role'],
+  requiredRole: 'doctor',
 })
 
 // Состояние табов

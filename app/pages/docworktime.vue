@@ -190,6 +190,8 @@
 <script setup>
 definePageMeta({
   layout: 'doclayout',
+  middleware: ['auth-role'],
+  requiredRole: 'doctor',
 })
 
 // Текущая дата и состояние
@@ -369,7 +371,3 @@ const saveSchedule = () => {
   alert('Расписание сохранено!')
 }
 </script>
-
-<style scoped>
-/* Дополнительные стили при необходимости */
-</style>

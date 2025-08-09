@@ -1,7 +1,12 @@
-<script setup></script>
+<script setup>
+definePageMeta({
+  layout: 'doclayout',
+  middleware: ['auth-role'],
+  requiredRole: 'doctor',
+})
+</script>
 
 <template>
-  <docheader></docheader>
   <div class="max-w-6xl mx-auto">
     <!-- Фильтры -->
     <div class="bg-white rounded-lg shadow-md p-6 mb-8">

@@ -1,6 +1,4 @@
 <template>
-  <docheader></docheader>
-
   <main>
     <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <article class="rounded-xl border-2 border-gray-100 bg-white mb-4">
@@ -146,3 +144,11 @@
     </div>
   </main>
 </template>
+
+<script setup>
+definePageMeta({
+  layout: 'doclayout',
+  middleware: ['auth-role'],
+  requiredRole: 'doctor',
+})
+</script>
