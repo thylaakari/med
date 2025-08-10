@@ -1,7 +1,4 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useSupabaseClient, useSupabaseUser } from '#imports'
-
 useHead({
   script: [
     {
@@ -51,10 +48,8 @@ const transformResearch = (task) => ({
   category: task.category,
   timeLeft:
     task.timeToEnd > 0
-      ? `Осталось ${task.timeToEnd} минут`
-      : task.status === 'done'
-      ? 'Завершено'
-      : 'В аудите',
+      ? `Осталось ${formatMinutes(task.timeToEnd)}`
+      : 'Завершено',
   link: `/docres/${task.id}`,
 })
 
@@ -113,7 +108,6 @@ async function takeToWork(researchId, index) {
     tabsContent.value.created.splice(index, 1)
     tabsContent.value.inprogress.unshift({
       ...research,
-      timeLeft: `Осталось ${research.timeToEnd} минут`,
     })
   } catch (err) {
     error.value = err.message
@@ -168,6 +162,16 @@ function setupRealtime() {
       }
     )
     .subscribe()
+}
+
+const formatMinutes = (minutes) => {
+  if (minutes < 60) {
+    return `${minutes} мин`
+  } else {
+    const hours = Math.floor(minutes / 60)
+    const remainingMinutes = minutes % 60
+    return `${hours} ч ${remainingMinutes} мин`
+  }
 }
 
 onUnmounted(() => {
@@ -267,7 +271,7 @@ onMounted(() => {
               <div class="flex-1">
                 <div class="flex items-center gap-3">
                   <h3 class="text-xl font-semibold text-gray-900">
-                    {{ item.title }}
+                    {{ item.title }} #{{ item.id }}
                   </h3>
                   <div class="flex gap-2">
                     <span
@@ -325,7 +329,7 @@ onMounted(() => {
             <div class="sm:flex sm:justify-between sm:gap-4 lg:gap-6">
               <div class="my-4 sm:mt-0">
                 <h3 class="text-lg font-medium text-pretty text-gray-900">
-                  {{ item.title }}
+                  {{ item.title }} #{{ item.id }}
                   <span
                     v-for="tag in item.tags"
                     :key="tag.text"
@@ -367,7 +371,7 @@ onMounted(() => {
             <div class="sm:flex sm:justify-between sm:gap-4 lg:gap-6">
               <div class="my-4 sm:mt-0">
                 <h3 class="text-lg font-medium text-pretty text-gray-900">
-                  {{ item.title }}
+                  {{ item.title }} #{{ item.id }}
                   <span
                     v-for="tag in item.tags"
                     :key="tag.text"
@@ -378,27 +382,14 @@ onMounted(() => {
                       tag.color === 'blue'
                         ? 'bg-blue-100 text-blue-800 ring-blue-200'
                         : '',
-                      'inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ring-1 ring-inset',
+                      'inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ring-1 ring-inset mr-2',
                     ]"
                   >
                     {{ tag.text }}
                   </span>
                 </h3>
-                <p class="mt-4 line-clamp-2 text-sm text-pretty text-gray-700">
-                  {{ item.description }}
-                </p>
               </div>
             </div>
-            <span
-              :class="[
-                item.timeLeft.includes('Осталось')
-                  ? 'bg-yellow-50 text-yellow-800 inset-ring inset-ring-yellow-600/20'
-                  : 'bg-gray-50 text-gray-600 inset-ring inset-ring-gray-500/10',
-                'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium',
-              ]"
-            >
-              {{ item.timeLeft }}
-            </span>
           </NuxtLink>
         </div>
 
@@ -412,7 +403,7 @@ onMounted(() => {
             <div class="sm:flex sm:justify-between sm:gap-4 lg:gap-6">
               <div class="my-4 sm:mt-0">
                 <h3 class="text-lg font-medium text-pretty text-gray-900">
-                  {{ item.title }}
+                  {{ item.title }} #{{ item.id }}
                   <span
                     v-for="tag in item.tags"
                     :key="tag.text"
@@ -426,26 +417,8 @@ onMounted(() => {
                     {{ tag.text }}
                   </span>
                 </h3>
-                <p class="mt-4 line-clamp-2 text-sm text-pretty text-gray-700">
-                  {{ item.description }}
-                </p>
               </div>
             </div>
-            <span
-              class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 inset-ring inset-ring-green-600/20 mr-2"
-            >
-              {{ item.category }}
-            </span>
-            <span
-              :class="[
-                item.timeLeft.includes('Осталось')
-                  ? 'bg-yellow-50 text-yellow-800 inset-ring inset-ring-yellow-600/20'
-                  : 'bg-gray-50 text-gray-600 inset-ring inset-ring-gray-500/10',
-                'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium',
-              ]"
-            >
-              {{ item.timeLeft }}
-            </span>
           </NuxtLink>
         </div>
       </div>

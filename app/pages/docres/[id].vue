@@ -151,7 +151,7 @@ onUnmounted(() => {
                   {{ research.region }}
                   <span
                     v-if="research.isUrgent"
-                    class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 inset-ring inset-ring-red-600/10"
+                    class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 inset-ring inset-ring-red-600/10 mr-2"
                     >Срочное</span
                   >
                   <span
