@@ -59,10 +59,8 @@ async function fetchResearches() {
     loading.value = true
     const { data, error: fetchError } = await supabase
       .from('researches')
-      .select(
-        'id, region, modality, isUrgent, anamnesis, patientAge, category, timeToEnd, status, sex'
-      )
-
+      .select('*')
+      .or(`doctor.eq.${user.value?.email},doctor.is.null`)
     if (fetchError) {
       error.value = fetchError.message
       return
