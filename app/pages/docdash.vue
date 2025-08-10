@@ -1,4 +1,7 @@
 <script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useSupabaseClient, useSupabaseUser } from '#imports'
+
 useHead({
   script: [
     {
@@ -36,6 +39,26 @@ const setTab = (tab) => {
   activeTab.value = tab
 }
 
+// Функция для преобразования данных исследования
+const transformResearch = (task) => ({
+  id: task.id, // Сохраняем id для обновления статуса
+  title: task.region,
+  tags: [
+    task.isUrgent ? { text: 'Срочное', color: 'red' } : null,
+    { text: task.modality, color: 'blue' },
+  ].filter(Boolean),
+  description: `${task.sex}, ${task.patientAge} лет`,
+  category: task.category,
+  timeLeft:
+    task.timeToEnd > 0
+      ? `Осталось ${task.timeToEnd} минут`
+      : task.status === 'done'
+      ? 'Завершено'
+      : 'В аудите',
+  link: `/docres/${task.id}`,
+})
+
+// Загрузка начальных данных
 async function fetchResearches() {
   try {
     loading.value = true
@@ -53,53 +76,16 @@ async function fetchResearches() {
     tabsContent.value = {
       created: data
         .filter((task) => task.status === 'created')
-        .map((task) => ({
-          title: task.region,
-          tags: [
-            task.isUrgent ? { text: 'Срочное', color: 'red' } : null,
-            { text: task.modality, color: 'blue' },
-          ].filter(Boolean),
-          description: `${task.sex}, ${task.patientAge} лет`,
-          category: task.category,
-          timeLeft:
-            task.timeToEnd > 0
-              ? `Осталось ${Math.floor(task.timeToEnd / 60)} минут`
-              : 'Завершено',
-          link: `/docres/${task.id}`,
-        })),
+        .map(transformResearch),
       inprogress: data
         .filter((task) => task.status === 'inprogress')
-        .map((task) => ({
-          title: task.region,
-          tags: [
-            task.isUrgent ? { text: 'Срочное', color: 'red' } : null,
-            { text: task.modality, color: 'blue' },
-          ].filter(Boolean),
-          description: `${task.sex}, ${task.patientAge} лет`,
-          category: task.category,
-          timeLeft: `Осталось ${Math.floor(task.timeToEnd / 60)} минут`,
-          link: `/docres/${task.id}`,
-        })),
-      // done: data
-      //   .filter((task) => task.status === 'done')
-      //   .map((task) => ({
-      //     title: task.region,
-      //     tags: [{ text: task.modality, color: 'blue' }],
-      //     description: `${task.sex}, ${task.patientAge} лет`,
-      //     category: task.category,
-      //     timeLeft: 'Завершено',
-      //     link: `/docres/${task.id}`,
-      //   })),
-      // audit: data
-      //   .filter((task) => task.status === 'audit')
-      //   .map((task) => ({
-      //     title: task.region,
-      //     tags: [{ text: task.modality, color: 'blue' }],
-      //     description: `${task.sex}, ${task.patientAge} лет`,
-      //     category: task.category,
-      //     timeLeft: 'В аудите',
-      //     link: `/docres/${task.id}`,
-      //   })),
+        .map(transformResearch),
+      done: data
+        .filter((task) => task.status === 'done')
+        .map(transformResearch),
+      audit: data
+        .filter((task) => task.status === 'audit')
+        .map(transformResearch),
     }
   } catch (err) {
     error.value = err.message
@@ -109,9 +95,91 @@ async function fetchResearches() {
   }
 }
 
+// Функция для взятия исследования в работу
+async function takeToWork(researchId, index) {
+  try {
+    const { error: updateError } = await supabase
+      .from('researches')
+      .update({ status: 'inprogress', doctor: user.value?.email })
+      .eq('id', researchId)
+
+    if (updateError) {
+      error.value = updateError.message
+      return
+    }
+
+    // Перемещаем исследование из created в inprogress
+    const research = tabsContent.value.created[index]
+    tabsContent.value.created.splice(index, 1)
+    tabsContent.value.inprogress.unshift({
+      ...research,
+      timeLeft: `Осталось ${research.timeToEnd} минут`,
+    })
+  } catch (err) {
+    error.value = err.message
+    console.error('Ошибка при взятии в работу:', err)
+  }
+}
+
+// Реал-тайм подписка
+let subscription = null
+function setupRealtime() {
+  subscription = supabase
+    .channel('researches-channel')
+    .on(
+      'postgres_changes',
+      {
+        event: '*', // Ловим INSERT и UPDATE
+        schema: 'public',
+        table: 'researches',
+        filter: `doctor=eq.${user.value?.email}`,
+      },
+      (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newResearch = payload.new
+          if (
+            ['created', 'inprogress', 'done', 'audit'].includes(
+              newResearch.status
+            )
+          ) {
+            tabsContent.value[newResearch.status].unshift(
+              transformResearch(newResearch)
+            )
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const updatedResearch = payload.new
+          const oldStatus = payload.old.status
+          const newStatus = updatedResearch.status
+          if (oldStatus !== newStatus) {
+            // Удаляем из старого таба
+            tabsContent.value[oldStatus] = tabsContent.value[oldStatus].filter(
+              (item) => item.id !== updatedResearch.id
+            )
+            // Добавляем в новый таб
+            if (
+              ['created', 'inprogress', 'done', 'audit'].includes(newStatus)
+            ) {
+              tabsContent.value[newStatus].unshift(
+                transformResearch(updatedResearch)
+              )
+            }
+          }
+        }
+      }
+    )
+    .subscribe()
+}
+
+onUnmounted(() => {
+  if (subscription) {
+    supabase.removeChannel(subscription)
+  }
+})
+
 onMounted(() => {
   if (user.value) {
     fetchResearches()
+    setupRealtime()
   }
 })
 </script>
@@ -187,10 +255,70 @@ onMounted(() => {
           Загрузка...
         </div>
 
-        <div v-if="!loading && activeTab === 'created'" class="mt-6">
+        <div v-if="!loading && activeTab === 'created'" class="mt-6 space-y-4">
+          <div
+            v-for="(item, index) in tabsContent.created"
+            :key="item.id"
+            class="block rounded-xl border border-gray-200 p-6 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300"
+          >
+            <div
+              class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+            >
+              <div class="flex-1">
+                <div class="flex items-center gap-3">
+                  <h3 class="text-xl font-semibold text-gray-900">
+                    {{ item.title }}
+                  </h3>
+                  <div class="flex gap-2">
+                    <span
+                      v-for="tag in item.tags"
+                      :key="tag.text"
+                      :class="[
+                        tag.color === 'red'
+                          ? 'bg-red-100 text-red-800 ring-red-200'
+                          : '',
+                        tag.color === 'blue'
+                          ? 'bg-blue-100 text-blue-800 ring-blue-200'
+                          : '',
+                        'inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ring-1 ring-inset',
+                      ]"
+                    >
+                      {{ tag.text }}
+                    </span>
+                  </div>
+                </div>
+                <p class="mt-2 text-base text-gray-600 line-clamp-2">
+                  {{ item.description }}
+                </p>
+                <div class="mt-3 flex gap-2">
+                  <span
+                    :class="[
+                      item.timeLeft.includes('Осталось')
+                        ? 'bg-yellow-100 text-yellow-800 ring-yellow-200'
+                        : 'bg-gray-100 text-gray-600 ring-gray-200',
+                      'inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ring-1 ring-inset',
+                    ]"
+                  >
+                    {{ item.timeLeft }}
+                  </span>
+                </div>
+              </div>
+              <div class="mt-4 sm:mt-0 sm:flex sm:items-center">
+                <button
+                  @click="takeToWork(item.id, index)"
+                  class="w-full sm:w-auto px-6 py-3 text-lg font-bold text-white rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-800 hover:from-indigo-500 hover:to-indigo-700 shadow-md hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 cursor-pointer"
+                >
+                  Взять в работу
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!loading && activeTab === 'inprogress'" class="mt-6">
           <NuxtLink
-            v-for="item in tabsContent.created"
-            :key="item.title"
+            v-for="item in tabsContent.inprogress"
+            :key="item.id"
             :to="item.link"
             class="block rounded-md border border-gray-300 p-4 shadow-sm sm:p-6 bg-white mb-4"
           >
@@ -202,13 +330,10 @@ onMounted(() => {
                     v-for="tag in item.tags"
                     :key="tag.text"
                     :class="[
-                      tag.color === 'red'
-                        ? 'bg-red-50 text-red-700 inset-ring inset-ring-red-600/10'
-                        : '',
                       tag.color === 'blue'
                         ? 'bg-blue-50 text-blue-700 inset-ring inset-ring-blue-700/10'
                         : '',
-                      'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium  mr-2',
+                      'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium mr-2',
                     ]"
                   >
                     {{ tag.text }}
@@ -219,11 +344,6 @@ onMounted(() => {
                 </p>
               </div>
             </div>
-            <span
-              class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 inset-ring inset-ring-green-600/20 mr-2"
-            >
-              {{ item.category }} категория
-            </span>
             <span
               :class="[
                 item.timeLeft.includes('Осталось')
@@ -237,52 +357,10 @@ onMounted(() => {
           </NuxtLink>
         </div>
 
-        <div v-if="!loading && activeTab === 'inprogress'" class="mt-6">
-          <NuxtLink
-            v-for="item in tabsContent.inprogress"
-            :key="item.title"
-            :to="item.link"
-            class="block rounded-md border border-gray-300 p-4 shadow-sm sm:p-6 bg-white mb-4"
-          >
-            <div class="sm:flex sm:justify-between sm:gap-4 lg:gap-6">
-              <div class="my-4 sm:mt-0">
-                <h3 class="text-lg font-medium text-pretty text-gray-900">
-                  {{ item.title }}
-                  <span
-                    v-for="tag in item.tags"
-                    :key="tag.text"
-                    :class="[
-                      tag.color === 'blue'
-                        ? 'bg-blue-50 text-blue-700 inset-ring inset-ring-blue-700/10'
-                        : '',
-                      'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium',
-                    ]"
-                  >
-                    {{ tag.text }}
-                  </span>
-                </h3>
-                <p class="mt-4 line-clamp-2 text-sm text-pretty text-gray-700">
-                  {{ item.description }}
-                </p>
-              </div>
-            </div>
-            <span
-              class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 inset-ring inset-ring-green-600/20 mr-2"
-            >
-              {{ item.category }}
-            </span>
-            <span
-              class="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-800 inset-ring inset-ring-yellow-600/20"
-            >
-              {{ item.timeLeft }}
-            </span>
-          </NuxtLink>
-        </div>
-
         <div v-if="!loading && activeTab === 'done'" class="mt-6">
           <NuxtLink
             v-for="item in tabsContent.done"
-            :key="item.title"
+            :key="item.id"
             :to="item.link"
             class="block rounded-md border border-gray-300 p-4 shadow-sm sm:p-6 bg-white mb-4"
           >
@@ -294,10 +372,13 @@ onMounted(() => {
                     v-for="tag in item.tags"
                     :key="tag.text"
                     :class="[
-                      tag.color === 'blue'
-                        ? 'bg-blue-50 text-blue-700 inset-ring inset-ring-blue-700/10'
+                      tag.color === 'red'
+                        ? 'bg-red-100 text-red-800 ring-red-200'
                         : '',
-                      'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium',
+                      tag.color === 'blue'
+                        ? 'bg-blue-100 text-blue-800 ring-blue-200'
+                        : '',
+                      'inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ring-1 ring-inset',
                     ]"
                   >
                     {{ tag.text }}
@@ -309,12 +390,12 @@ onMounted(() => {
               </div>
             </div>
             <span
-              class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 inset-ring inset-ring-green-600/20 mr-2"
-            >
-              {{ item.category }}
-            </span>
-            <span
-              class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10"
+              :class="[
+                item.timeLeft.includes('Осталось')
+                  ? 'bg-yellow-50 text-yellow-800 inset-ring inset-ring-yellow-600/20'
+                  : 'bg-gray-50 text-gray-600 inset-ring inset-ring-gray-500/10',
+                'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium',
+              ]"
             >
               {{ item.timeLeft }}
             </span>
@@ -324,7 +405,7 @@ onMounted(() => {
         <div v-if="!loading && activeTab === 'audit'" class="mt-6">
           <NuxtLink
             v-for="item in tabsContent.audit"
-            :key="item.title"
+            :key="item.id"
             :to="item.link"
             class="block rounded-md border border-gray-300 p-4 shadow-sm sm:p-6 bg-white mb-4"
           >
@@ -339,7 +420,7 @@ onMounted(() => {
                       tag.color === 'blue'
                         ? 'bg-blue-50 text-blue-700 inset-ring inset-ring-blue-700/10'
                         : '',
-                      'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium',
+                      'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium mr-2',
                     ]"
                   >
                     {{ tag.text }}
@@ -356,7 +437,12 @@ onMounted(() => {
               {{ item.category }}
             </span>
             <span
-              class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10"
+              :class="[
+                item.timeLeft.includes('Осталось')
+                  ? 'bg-yellow-50 text-yellow-800 inset-ring inset-ring-yellow-600/20'
+                  : 'bg-gray-50 text-gray-600 inset-ring inset-ring-gray-500/10',
+                'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium',
+              ]"
             >
               {{ item.timeLeft }}
             </span>
