@@ -4,6 +4,29 @@ definePageMeta({
   middleware: ['auth-role'],
   requiredRole: 'doctor',
 })
+
+const supabase = useSupabaseClient()
+const user = useSupabaseUser()
+const stats = ref([])
+const loading = ref(true)
+
+async function getStats() {
+  try {
+    const { data, count, error } = await supabase
+      .from('researches')
+      .select('*', { count: 'exact' })
+      .eq('doctor', user.value?.email)
+    stats.value = data
+    stats.value.count = count
+    loading.value = false
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+onMounted(() => {
+  getStats()
+})
 </script>
 
 <template>
@@ -47,7 +70,9 @@ definePageMeta({
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-medium text-gray-500">Всего исследований</p>
-            <p class="text-3xl font-bold text-gray-800 mt-2">1,248</p>
+            <p class="text-3xl font-bold text-gray-800 mt-2">
+              {{ stats.count }}
+            </p>
             <p class="text-sm text-green-600 mt-1">+12% за период</p>
           </div>
           <div class="bg-blue-100 p-3 rounded-full">
