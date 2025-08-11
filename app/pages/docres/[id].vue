@@ -36,7 +36,7 @@ async function fetchResearch() {
     const { data, error: fetchError } = await supabase
       .from('researches')
       .select(
-        'id, region, modality, isUrgent, anamnesis, patientAge, category, timeToEnd, status, protocol, conclusion, isAudit, auditResult, secondView, sex'
+        'id, region, modality, isUrgent, anamnesis, patientAge, category, timeToEnd, status, protocol, conclusion, sex'
       )
       .eq('id', route.params.id)
       .eq('doctor', user.value?.email)
@@ -92,36 +92,10 @@ async function completeResearch() {
   }
 }
 
-// Реал-тайм подписка на обновления исследования
-let subscription = null
-function setupRealtime() {
-  subscription = supabase
-    .channel(`research-${route.params.id}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'researches',
-        filter: `id=eq.${route.params.id}`,
-      },
-      (payload) => {
-        research.value = { ...research.value, ...payload.new }
-      }
-    )
-    .subscribe()
-}
-
 onMounted(() => {
   if (user.value) {
     fetchResearch()
     setupRealtime()
-  }
-})
-
-onUnmounted(() => {
-  if (subscription) {
-    supabase.removeChannel(subscription)
   }
 })
 </script>
