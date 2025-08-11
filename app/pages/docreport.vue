@@ -20,49 +20,6 @@ if (!user) {
 // Form data
 const problemType = ref('technical')
 const problemDescription = ref('')
-const files = ref([])
-
-// Handle file selection
-const handleFileChange = (event) => {
-  const selectedFiles = Array.from(event.target.files)
-  if (selectedFiles.length + files.value.length > 3) {
-    alert('Максимум 3 файла')
-    return
-  }
-  selectedFiles.forEach((file) => {
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Файл превышает 5MB')
-      return
-    }
-    files.value.push(file)
-  })
-  updateFileList()
-}
-
-// Update file list display
-const updateFileList = () => {
-  const fileList = document.getElementById('fileList')
-  fileList.innerHTML = ''
-  files.value.forEach((file, index) => {
-    const fileItem = document.createElement('div')
-    fileItem.className =
-      'flex items-center justify-between p-2 bg-gray-100 rounded'
-    fileItem.innerHTML = `
-      <span>${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
-      <button type="button" class="text-red-500 hover:text-red-700" data-index="${index}">
-        <i class="fas fa-trash"></i>
-      </button>
-    `
-    fileList.appendChild(fileItem)
-  })
-  fileList.querySelectorAll('button').forEach((button) => {
-    button.addEventListener('click', () => {
-      const index = parseInt(button.dataset.index)
-      files.value.splice(index, 1)
-      updateFileList()
-    })
-  })
-}
 
 // Handle form submission
 const handleSubmit = async (event) => {
@@ -74,36 +31,13 @@ const handleSubmit = async (event) => {
   }
 
   try {
-    // Upload files to Supabase storage
-    const fileUrls = []
-    for (const file of files.value) {
-      const fileName = `${uuidv4()}_${file.name}`
-      const { data, error } = await supabase.storage
-        .from('support-files')
-        .upload(fileName, file, {
-          upsert: false,
-        })
-
-      if (error) {
-        console.error('Storage error:', error)
-        throw new Error(`Failed to upload file ${file.name}: ${error.message}`)
-      }
-
-      // Get public URL for the uploaded file
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('support-files').getPublicUrl(fileName)
-      fileUrls.push(publicUrl)
-    }
-
     // Insert form data into Supabase
     const { data, error } = await supabase.from('support_requests').insert({
       problem_type: problemType.value,
       description: problemDescription.value,
-      files: fileUrls,
       created_at: new Date().toISOString(),
       status: 'pending',
-      user_id: user.id, // Include user ID for RLS
+      from: user.email, // Include user ID for RLS
     })
 
     if (error) {
@@ -114,10 +48,8 @@ const handleSubmit = async (event) => {
     alert('Сообщение успешно отправлено!')
     // Reset form
     problemDescription.value = ''
-    files.value = []
     problemType.value = 'technical'
     document.getElementById('problemForm').reset()
-    updateFileList()
   } catch (error) {
     console.error('Error submitting form:', error)
     alert(`Ошибка при отправке сообщения: ${error.message}`)
@@ -208,36 +140,6 @@ const handleSubmit = async (event) => {
             required
           ></textarea>
         </div>
-
-        <!-- Прикрепление файлов -->
-        <!-- <div class="mb-6">
-          <label class="block text-gray-700 font-medium mb-2"
-            >Прикрепить файлы (если есть)</label
-          >
-          <div
-            class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center"
-          >
-            <input
-              type="file"
-              id="fileUpload"
-              class="hidden"
-              multiple
-              @change="handleFileChange"
-            />
-            <label for="fileUpload" class="cursor-pointer">
-              <i
-                class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"
-              ></i>
-              <p class="text-gray-500">
-                Перетащите файлы сюда или нажмите для выбора
-              </p>
-              <p class="text-sm text-gray-400 mt-1">
-                Максимум 3 файла, до 5MB каждый
-              </p>
-            </label>
-          </div>
-          <div id="fileList" class="mt-2 space-y-2"></div>
-        </div> -->
 
         <!-- Кнопки -->
         <div class="flex flex-col sm:flex-row justify-end gap-3">

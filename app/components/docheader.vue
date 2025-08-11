@@ -15,11 +15,11 @@
             class="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
             >Аудиты</NuxtLink
           >
-          <NuxtLink
+          <!-- <NuxtLink
             to="/docstats"
             class="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
             >Статистика</NuxtLink
-          >
+          > -->
           <NuxtLink
             to="/docworktime"
             class="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
